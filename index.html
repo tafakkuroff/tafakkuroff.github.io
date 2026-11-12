@@ -1,0 +1,166 @@
+<title>Tafakkur</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap">
+<style>
+/* Layout: dark-blue gradient reading column, big name header, tab views, floating bottom nav */
+:root{
+  --bg:#EEF3F7; --bg2:#E2ECF3; --surface:#FFFFFF; --fg:#0F1D2A; --muted:#566573; --line:#D3DEE7;
+  --accent:#0E6E9E; --accent-fg:#FFFFFF; --soft:#DCEBF4; --nav:#FFFFFF;
+  --font-display:"Literata",Georgia,serif;
+  --font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B2A40; --bg2:#0A1B2B; --surface:#12384F; --fg:#EAF3F9; --muted:#9FB6C6; --line:#24506B;
+    --accent:#5FC3F0; --accent-fg:#06202F; --soft:#174660; --nav:#0F3249; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B2A40; --bg2:#0A1B2B; --surface:#12384F; --fg:#EAF3F9; --muted:#9FB6C6; --line:#24506B;
+  --accent:#5FC3F0; --accent-fg:#06202F; --soft:#174660; --nav:#0F3249; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); background-image:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%); background-attachment:fixed;
+  color:var(--fg); font-family:var(--font-body); font-size:16px; line-height:1.6; margin:0;
+  padding-block:28px 120px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+.brand{font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:12px;color:var(--muted)}
+h1{font-family:var(--font-display);font-size:clamp(46px,13vw,76px);line-height:1;margin:6px 0 0;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+h2{font-family:var(--font-display);font-size:26px;margin:0;text-wrap:balance}
+.lead{font-size:19px;margin:0;max-width:32em;text-wrap:pretty}
+.muted{color:var(--muted);margin:0}
+.view{display:none;flex-direction:column;gap:22px}
+.view.on{display:flex}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:14px;color:var(--muted);background:transparent}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-block;padding:12px 18px;border-radius:999px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid var(--accent)}
+.btn.p{background:var(--accent);color:var(--accent-fg)}
+.stats{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.stat{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.stat b{font-size:22px;font-weight:500}
+.stat small{letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-size:12px;text-align:right}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+details.card summary{cursor:pointer;list-style:none;display:flex;flex-direction:column;gap:2px}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary b{font-family:var(--font-display);font-size:19px}
+details.card summary span{color:var(--muted);font-size:14px}
+details.card[open] summary{margin-bottom:12px}
+details.card p{margin:0 0 10px}
+.links{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden}
+.links a{display:flex;justify-content:space-between;gap:12px;padding:15px 18px;text-decoration:none;color:var(--fg);border-top:1px solid var(--line)}
+.links a:first-child{border-top:0}
+.links small{color:var(--muted)}
+.quote{font-family:var(--font-display);font-size:22px;line-height:1.4;margin:0;padding-left:16px;border-left:3px solid var(--accent);text-wrap:balance}
+nav{
+  position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;
+  padding:0 max(12px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));
+  pointer-events:none;
+}
+nav .bar{pointer-events:auto;display:flex;gap:4px;width:100%;max-width:520px;background:var(--nav);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+nav button{flex:1;min-width:0;border:0;background:transparent;color:var(--muted);font:600 13px var(--font-body);padding:11px 4px;border-radius:999px;cursor:pointer}
+nav button[aria-current="true"]{background:var(--accent);color:var(--accent-fg)}
+footer{color:var(--muted);font-size:14px}
+</style>
+
+<div class="wrap">
+  <div>
+    <div class="brand">Fikr · Bilim · Mutolaa</div>
+    <h1>Tafak<span>kur</span></h1>
+  </div>
+
+  <section class="view on" id="v-bosh">
+    <p class="lead">Har kuni bir kitob xulosasi, bir foydali maslahat va bir yangi fikr. Qisqa, sodda va hammaga tushunarli.</p>
+    <div class="pills"><span class="pill">Kitob xulosalari</span><span class="pill">Maslahatlar</span><span class="pill">Faktlar</span><span class="pill">Jurnalistika</span></div>
+    <div class="btns">
+      <a class="btn p" href="https://t.me/tafakkuroff">Kanalga qo'shilish</a>
+      <a class="btn" href="https://t.me/Aloferiya_bot">Botni ochish</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>Har kuni</b><small>Yangi bilim kanalda</small></div>
+      <div class="stat"><b>Bepul</b><small>Hammasi Telegramda</small></div>
+      <div class="stat"><b>Ball</b><small>Bot orqali faollik uchun</small></div>
+    </div>
+    <p class="quote">Ko'p o'qigan emas, to'g'ri o'ylagan odam oldinga ketadi.</p>
+  </section>
+
+  <section class="view" id="v-kitob">
+    <h2>Kitob xulosalari</h2>
+    <p class="muted">Bosing va o'qing. Har biri taxminan 2 daqiqalik.</p>
+
+    <details class="card">
+      <summary><b>Atomik odatlar</b><span>James Clear, 2018</span></summary>
+      <p>Katta o'zgarish kichik odatlardan boshlanadi. Har kuni atigi 1% yaxshilansangiz, bir yilda o'zingizni tanib bo'lmas darajada o'zgartirasiz.</p>
+      <p>Odat to'rt bosqichdan iborat: ishora, istak, harakat va mukofot. Yaxshi odat uchun to'rttasini ham osonlashtiring, yomon odat uchun qiyinlashtiring.</p>
+      <p>Amaliy qoida: kuniga 2 daqiqa bilan boshlang. "Bir sahifa o'qiyman" oson, shuning uchun to'xtamaysiz. Aniq reja tuzing: "21:00 da, choy ichgach, 10 sahifa o'qiyman".</p>
+      <p><b>Xulosa:</b> maqsad yo'nalishni ko'rsatadi, yutuqni esa tizim beradi.</p>
+    </details>
+
+    <details class="card">
+      <summary><b>Chuqur ish</b><span>Cal Newport, 2016</span></summary>
+      <p>Zamonaviy dunyoda eng qimmat ko'nikma chalg'imasdan chuqur o'ylay olishdir. Telefon va xabarlar diqqatni parchalaydi.</p>
+      <p>Yuzaki ish: xabarlarga javob, yig'ilishlar. Chuqur ish: diqqatni to'liq jamlab qiyin ishni bajarish, masalan o'qish, yozish, o'rganish.</p>
+      <p>Mashq: har kuni 1-2 soatni faqat chuqur ishga ajrating, telefonni boshqa xonaga qo'ying. 45 daqiqadan boshlab, asta uzaytiring.</p>
+      <p><b>Xulosa:</b> diqqat yangi boylikdir. Uni qayerga sarflasangiz, hayotingiz ham o'sha yoqqa boradi.</p>
+    </details>
+
+    <details class="card">
+      <summary><b>Tez va sekin fikrlash</b><span>Daniel Kahneman, 2011</span></summary>
+      <p>Miya ikki usulda ishlaydi. 1-tizim tez, avtomatik va hissiy. 2-tizim sekin, ongli va mantiqiy.</p>
+      <p>Tipik xatolar: langar effekti (eshitgan birinchi raqam bahoingizga ta'sir qiladi), yo'qotishdan qo'rqish va yaxshi esda qolgan narsani keng tarqalgan deb o'ylash.</p>
+      <p>Foydalanish: muhim qaror oldida to'xtang va "Men buni hissiyot bilan qaror qilyapmanmi?" deb so'rang.</p>
+      <p><b>Xulosa:</b> shoshilmagan fikr ko'pincha to'g'ri fikrdir.</p>
+    </details>
+
+    <p class="muted">Boshqa xulosalar har kuni <a href="https://t.me/tafakkuroff">@tafakkuroff</a> kanalida chiqadi.</p>
+  </section>
+
+  <section class="view" id="v-maqola">
+    <h2>Maqolalar</h2>
+    <p class="muted">Kitob bo'yicha maqola, iqtibos va sharhlar botdagi Jurnalistika bo'limida yoziladi. Admin ruxsat bergan maqolalar kanalda e'lon qilinadi.</p>
+    <div class="card"><b>Qanday yozaman?</b>
+      <p class="muted" style="margin-top:6px">Botni oching, "Jurnalistika" tugmasini bosing, sarlavha va matn yuboring. Yaxshi maqolalar uchun ball beriladi.</p></div>
+    <div class="btns"><a class="btn p" href="https://t.me/Aloferiya_bot">Botda yozish</a></div>
+  </section>
+
+  <section class="view" id="v-koproq">
+    <h2>Bog'lanish</h2>
+    <div class="links">
+      <a href="https://t.me/tafakkuroff"><b>Tafakkur kanali</b><small>@tafakkuroff</small></a>
+      <a href="https://t.me/aloferiya"><b>Aloferiya kanali</b><small>@aloferiya</small></a>
+      <a href="https://t.me/Aloferiya_bot"><b>Aloferiya boti</b><small>@Aloferiya_bot</small></a>
+    </div>
+    <footer>Muallif: Qaxromon Zafarov</footer>
+  </section>
+</div>
+
+<nav><div class="bar" role="tablist">
+  <button data-v="bosh" aria-current="true">Bosh</button>
+  <button data-v="kitob">Kitoblar</button>
+  <button data-v="maqola">Maqolalar</button>
+  <button data-v="koproq">Ko'proq</button>
+</div></nav>
+
+<script>
+(function(){
+  var btns=document.querySelectorAll('nav button');
+  function show(n){
+    if(!document.getElementById('v-'+n)) n='bosh';
+    document.querySelectorAll('.view').forEach(function(s){s.classList.toggle('on',s.id==='v-'+n)});
+    btns.forEach(function(b){b.setAttribute('aria-current',b.dataset.v===n?'true':'false')});
+    window.scrollTo(0,0);
+  }
+  btns.forEach(function(b){b.addEventListener('click',function(){
+    try{history.replaceState(null,'','#'+b.dataset.v)}catch(e){}
+    show(b.dataset.v);
+  })});
+  show((location.hash||'').slice(1));
+})();
+</script>
