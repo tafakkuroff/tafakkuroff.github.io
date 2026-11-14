@@ -132,11 +132,13 @@ async function profile(uid){
  let mine="";if(own){const {data}=await sb.from("articles").select("id,title,status,created_at,note").eq("author_id",id).neq("status","published").order("created_at",{ascending:false});
   mine=(data&&data.length)?'<h2>Tekshiruvdagi / rad etilgan</h2>'+data.map(a=>`<a class="card" href="#/a/${a.id}"><b>${esc(a.title)}</b><span class="m">${a.status==="pending"?"⏳ Tekshiruvda":"❌ Rad etilgan"}${a.note?" — "+esc(a.note):""}</span></a>`).join(""):""}
  const ac=ach(p.full_name,pts,reads,pub);
+ const {data:sh}=await sb.from("shelf").select("*").eq("user_id",id).order("created_at",{ascending:false});const psv=await mySaved();
  view(`<div class="av">${esc(p.avatar)}</div><h1>${esc(p.full_name)}</h1>${p.bio?`<p>${esc(p.bio)}</p>`:""}
  ${p.interests?.length?`<div class="row">${p.interests.map(i=>`<span class="tag">${esc(i)}</span>`).join("")}</div>`:""}
  <div class="stat"><div><b>${pts}</b>ball</div><div><b>${pub}</b>maqola</div><div><b>${vw}</b>ko'rish</div>${own?`<div><b>${reads}</b>o'qigan</div>`:""}</div>
  ${ac.length?`<h2>Yutuqlar</h2><div class="row">${ac.map(x=>`<span class="tag">${x}</span>`).join("")}</div>`:""}
  <h2>Maqolalari</h2>${(st||[]).map(a=>`<a class="card" href="#/a/${a.article_id}"><span class="tag">${esc(a.category)}</span><b>${esc(a.title)}</b><span class="m">👁 ${a.views} · ${a.points} ball</span></a>`).join("")||'<p class="m">Hali e\'lon qilingan maqola yo\'q.</p>'}
+ <h2>Javonim</h2>${(sh||[]).map(k=>shelfCard(k,{[id]:p},psv)).join("")||'<p class="m">Javonda hali kitob yo\'q.</p>'}${own?'<a class="btn" href="#/books/add">➕ Javonga kitob qo\'shish</a>':""}
  ${mine}${own?`<h2>Profilni tahrirlash</h2>
  <label>Ism va familiya</label><input id="fn" value="${esc(p.full_name)}"><label>Avatar</label><div class="row">${AVS.map(a=>`<span class="chip ${a===p.avatar?"on":""}" data-av="${a}">${a}</span>`).join("")}</div>
  <label>O'zi haqida</label><textarea id="bio" style="min-height:90px;font-family:system-ui">${esc(p.bio)}</textarea>
@@ -144,18 +146,65 @@ async function profile(uid){
  <div class="row"><button id="sv">Saqlash</button>${prof?.is_admin?'<a class="btn o" href="#/admin">Tahririyat</a>':""}<button class="o" id="out">Chiqish</button></div><p class="m" id="ok"></p>`:""}`);
  if(own){let av=p.avatar;document.querySelectorAll("[data-av]").forEach(el=>el.onclick=()=>{av=el.dataset.av;document.querySelectorAll("[data-av]").forEach(x=>x.classList.toggle("on",x===el))});
   document.querySelectorAll("[data-in]").forEach(el=>el.onclick=()=>el.classList.toggle("on"));
+  bindShelf(psv,()=>profile(uid));
   document.getElementById("sv").onclick=async()=>{const ints=[...document.querySelectorAll("[data-in].on")].map(x=>x.dataset.in);
    const {error}=await sb.from("profiles").update({full_name:fn.value.trim(),avatar:av,bio:bio.value.trim(),interests:ints}).eq("id",me.id);
    document.getElementById("ok").textContent=error?"Xato: "+error.message:"Saqlandi ✓";await loadMe()};
   document.getElementById("out").onclick=async()=>{await sb.auth.signOut();await loadMe();location.hash="#/"}}
 }
 
+const stars=n=>"★".repeat(n)+"☆".repeat(5-n);
+function shelfCard(k,pm,sv,mine){const p=pm[k.user_id]||{};
+ return `<div class="card book">${k.cover_url?`<img src="${esc(k.cover_url)}" alt="" loading="lazy" style="width:100%;max-height:340px;object-fit:contain;background:#f1ecdf;border-radius:10px;margin-bottom:8px">`:""}
+ <b>${esc(k.title)}</b><span class="m">${esc(k.author)}</span><div style="color:var(--g);font-size:22px;letter-spacing:2px">${stars(k.stars)}</div>
+ <p style="margin:6px 0"><span class="m">Bu kitob menga nima berdi:</span><br>${esc(k.review)}</p>
+ <span class="m"><a href="#/u/${k.user_id}">${esc(p.avatar||"")} ${esc(p.full_name||"O'quvchi")}</a> · ${dt(k.created_at)}</span>
+ <div class="row">${me&&sv?`<button data-b="${k.id}" class="${sv.has(k.id)?"o":""}">${sv.has(k.id)?"✓ Saqlangan":"🔖 Saqlash"}</button>`:""}${me&&(k.user_id===me.id||prof?.is_admin)?`<button class="r" data-db="${k.id}" data-img="${esc(k.cover_url||"")}">O'chirish</button>`:""}</div></div>`}
+function bindShelf(sv,reload){
+ document.querySelectorAll("[data-b]").forEach(el=>el.onclick=async()=>{const id=el.dataset.b;if(sv.has(id))await sb.from("saves").delete().eq("user_id",me.id).eq("kind","book").eq("item_id",id);else await sb.from("saves").insert({user_id:me.id,kind:"book",item_id:id});reload()});
+ document.querySelectorAll("[data-db]").forEach(el=>el.onclick=async()=>{if(!confirm("Kitob o'chirilsinmi?"))return;
+  await sb.from("shelf").delete().eq("id",el.dataset.db);
+  const m=(el.dataset.img||"").split("/covers/")[1];if(m)await sb.storage.from("covers").remove([m]);reload()})}
+async function mySaved(){if(!me)return new Set();const {data}=await sb.from("saves").select("item_id").eq("user_id",me.id).eq("kind","book");return new Set((data||[]).map(x=>x.item_id))}
 async function books(){
  view('<p class="m">Yuklanmoqda…</p>');
- const {data:b}=await sb.from("books").select("*").order("created_at");
- let sv=new Set();if(me){const {data}=await sb.from("saves").select("item_id").eq("user_id",me.id).eq("kind","book");sv=new Set((data||[]).map(x=>x.item_id))}
- view(`<h1>Kitoblar</h1>${(b||[]).map(k=>`<div class="card book"><b>${esc(k.title)}</b><span class="m">${esc(k.author)}</span><p style="margin:6px 0">${esc(k.info)}</p>${me?`<button class="${sv.has(k.id)?"o":""}" data-b="${k.id}">${sv.has(k.id)?"✓ Saqlangan":"🔖 Saqlash"}</button>`:""}</div>`).join("")}`);
- document.querySelectorAll("[data-b]").forEach(el=>el.onclick=async()=>{const id=el.dataset.b;if(sv.has(id))await sb.from("saves").delete().eq("user_id",me.id).eq("kind","book").eq("item_id",id);else await sb.from("saves").insert({user_id:me.id,kind:"book",item_id:id});books()});
+ const {data:b}=await sb.from("shelf").select("*").order("created_at",{ascending:false}).limit(60);
+ const ids=[...new Set((b||[]).map(x=>x.user_id))];
+ const {data:ps}=ids.length?await sb.from("profiles").select("id,full_name,avatar").in("id",ids):{data:[]};
+ const pm=Object.fromEntries((ps||[]).map(p=>[p.id,p]));const sv=await mySaved();
+ view(`<h1>Kitoblar</h1><p class="m">O'quvchilarning javonidagi kitoblar. Har biri nima bergani va baholari bilan.</p>
+ <a class="btn" href="#/books/add">➕ Javonimga kitob qo'shish</a>
+ ${(b||[]).map(k=>shelfCard(k,pm,sv)).join("")||'<p class="m">Hozircha kitob yo\'q. Birinchi bo\'ling!</p>'}`);
+ bindShelf(sv,books);
+}
+async function addBook(){
+ if(!me)return needLogin();
+ view(`<h1>Javonimga kitob</h1><label>Kitob nomi</label><input id="bt" maxlength="120"><label>Muallifi</label><input id="ba" maxlength="80">
+ <label>Kitob rasmi (muqovasi)</label><input id="bf" type="file" accept="image/*"><img id="pv" style="display:none;max-width:60%;border-radius:10px;margin-bottom:10px">
+ <label>Sizga yoqdimi? Yulduzcha bering</label><div class="row" id="st" style="font-size:34px;color:var(--g);cursor:pointer;gap:4px">${[1,2,3,4,5].map(i=>`<span data-s="${i}">☆</span>`).join("")}</div>
+ <label>Bu kitob sizga nima berdi? (kamida 20 belgi)</label><textarea id="br" style="min-height:140px"></textarea>
+ <p class="err" id="e"></p><button id="go">Javonga qo'yish</button>`);
+ let star=0;const paint=()=>document.querySelectorAll("#st [data-s]").forEach(x=>x.textContent=+x.dataset.s<=star?"★":"☆");
+ document.querySelectorAll("#st [data-s]").forEach(x=>x.onclick=()=>{star=+x.dataset.s;paint()});
+ let blob=null;
+ document.getElementById("bf").onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  const img=new Image();img.src=URL.createObjectURL(f);await img.decode();
+  const sc=Math.min(1,700/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);blob=await new Promise(r=>c.toBlob(r,"image/jpeg",0.82));
+  const pv=document.getElementById("pv");pv.src=URL.createObjectURL(blob);pv.style.display="block"};
+ document.getElementById("go").onclick=async()=>{const e=document.getElementById("e"),t=bt.value.trim(),a=ba.value.trim(),r=br.value.trim();
+  if(t.length<2||a.length<2){e.textContent="Kitob nomi va muallifini yozing.";return}
+  if(!blob){e.textContent="Kitob rasmini tanlang.";return}
+  if(!star){e.textContent="Yulduzcha bering (1–5).";return}
+  if(r.length<20){e.textContent="Kitob sizga nima bergani haqida kamida 20 belgi yozing.";return}
+  const btn=document.getElementById("go");btn.disabled=true;e.textContent="Yuklanmoqda…";
+  const path=`${me.id}/${Date.now()}.jpg`;
+  const up=await sb.storage.from("covers").upload(path,blob,{contentType:"image/jpeg"});
+  if(up.error){e.textContent="Rasm yuklanmadi: "+up.error.message;btn.disabled=false;return}
+  const url=sb.storage.from("covers").getPublicUrl(path).data.publicUrl;
+  const {error}=await sb.from("shelf").insert({user_id:me.id,title:t,author:a,cover_url:url,stars:star,review:r});
+  if(error){e.textContent="Xato: "+error.message;btn.disabled=false;return}
+  location.hash="#/books"};
 }
 async function lib(){
  if(!me)return needLogin();
@@ -163,9 +212,11 @@ async function lib(){
  const {data:s}=await sb.from("saves").select("*").eq("user_id",me.id).order("created_at",{ascending:false});
  const aid=(s||[]).filter(x=>x.kind==="article").map(x=>x.item_id), bid=(s||[]).filter(x=>x.kind==="book").map(x=>x.item_id);
  const {data:A}=aid.length?await sb.from("articles").select("id,title,category").in("id",aid):{data:[]};
- const {data:B}=bid.length?await sb.from("books").select("*").in("id",bid):{data:[]};
+ const {data:B}=bid.length?await sb.from("shelf").select("*").in("id",bid):{data:[]};
+ const bu=[...new Set((B||[]).map(x=>x.user_id))];const {data:bps}=bu.length?await sb.from("profiles").select("id,full_name,avatar").in("id",bu):{data:[]};const bpm=Object.fromEntries((bps||[]).map(p=>[p.id,p]));const bsv=new Set(bid);
  view(`<h1>Shaxsiy kutubxona</h1><h2>Maqolalar</h2>${(A||[]).map(a=>`<a class="card" href="#/a/${a.id}"><span class="tag">${esc(a.category)}</span><b>${esc(a.title)}</b></a>`).join("")||'<p class="m">Saqlangan maqola yo\'q.</p>'}
- <h2>Kitoblar</h2>${(B||[]).map(k=>`<div class="card book"><b>${esc(k.title)}</b><span class="m">${esc(k.author)}</span></div>`).join("")||'<p class="m">Saqlangan kitob yo\'q.</p>'}`);
+ <h2>Kitoblar</h2>${(B||[]).map(k=>shelfCard(k,bpm,bsv)).join("")||'<p class="m">Saqlangan kitob yo\'q.</p>'}`);
+ bindShelf(bsv,lib);
 }
 async function topPage(){
  view('<p class="m">Yuklanmoqda…</p>');
@@ -190,10 +241,9 @@ async function admin(){
  const {data:a}=await sb.from("articles").select("*").eq("status","pending").order("created_at");
  view(`<h1>Tahririyat</h1>${stats}<h2>Tekshiruvdagi maqolalar (${(a||[]).length})</h2>${(a||[]).map(x=>`<div class="card"><span class="tag">${esc(x.category)}</span><b>${esc(x.title)}</b><div class="body" style="max-height:220px;overflow:auto">${paras(x.body)}</div>
  <input placeholder="Izoh (rad etsangiz sababi)" id="n_${x.id}"><div class="row"><button data-ok="${x.id}">Ma'qullash</button><button class="r" data-no="${x.id}">Rad etish</button></div></div>`).join("")||'<p class="m">Yo\'q.</p>'}
- <h2>Kitob qo'shish</h2><label>Nomi</label><input id="bt"><label>Muallif</label><input id="ba"><label>Qisqacha</label><input id="bi"><button id="bk">Qo'shish</button><p class="m" id="bm"></p>`);
+`);
  document.querySelectorAll("[data-ok]").forEach(el=>el.onclick=async()=>{await sb.from("articles").update({status:"published",published_at:new Date().toISOString(),note:""}).eq("id",el.dataset.ok);admin()});
  document.querySelectorAll("[data-no]").forEach(el=>el.onclick=async()=>{const id=el.dataset.no;await sb.from("articles").update({status:"rejected",note:document.getElementById("n_"+id).value}).eq("id",id);admin()});
- document.getElementById("bk").onclick=async()=>{const {error}=await sb.from("books").insert({title:bt.value.trim(),author:ba.value.trim(),info:bi.value.trim()});document.getElementById("bm").textContent=error?error.message:"Qo'shildi ✓"};
 }
 
 async function route(){
@@ -204,7 +254,7 @@ async function route(){
   if(m=h.match(/^#\/a\/(.+)$/))return article(m[1]);
   if(m=h.match(/^#\/u\/(.+)$/))return profile(m[1]);
   if(h==="#/write")return write();if(h==="#/login")return login();if(h==="#/me")return profile();
-  if(h==="#/books")return books();if(h==="#/lib")return lib();if(h==="#/top")return topPage();if(h==="#/admin")return admin();
+  if(h==="#/books/add")return addBook();if(h==="#/books")return books();if(h==="#/lib")return lib();if(h==="#/top")return topPage();if(h==="#/admin")return admin();
   home();
  }catch(e){view('<p class="err">Xatolik: '+esc(e.message||e)+'</p>')}
  window.scrollTo(0,0);
