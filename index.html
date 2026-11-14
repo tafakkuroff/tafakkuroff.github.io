@@ -176,8 +176,19 @@ async function topPage(){
 async function admin(){
  if(!prof?.is_admin)return view("<h1>Ruxsat yo'q</h1>");
  view('<p class="m">Yuklanmoqda…</p>');
+ const cnt=async(t,f)=>{let q=sb.from(t).select("*",{count:"exact",head:true});if(f)q=f(q);const {count}=await q;return count||0};
+ const d1=new Date(Date.now()-864e5).toISOString(), d7=new Date(Date.now()-7*864e5).toISOString();
+ const [nu,nu1,nu7,npub,npend,nrej,nv,nsave]=await Promise.all([cnt("profiles"),cnt("profiles",q=>q.gte("created_at",d1)),cnt("profiles",q=>q.gte("created_at",d7)),cnt("articles",q=>q.eq("status","published")),cnt("articles",q=>q.eq("status","pending")),cnt("articles",q=>q.eq("status","rejected")),cnt("article_views"),cnt("saves")]);
+ const {data:us}=await sb.from("profiles").select("id,full_name,avatar,created_at,interests").order("created_at",{ascending:false}).limit(100);
+ const {data:ta}=await sb.rpc("top_authors");
+ const {data:tp}=await sb.from("article_stats").select("article_id,title,views").order("views",{ascending:false}).limit(5);
+ const stats=`<h2>Statistika</h2><div class="stat"><div><b>${nu}</b>foydalanuvchi</div><div><b>${nu1}</b>24 soatda</div><div><b>${nu7}</b>7 kunda</div></div>
+ <div class="stat"><div><b>${npub}</b>e'lon qilingan</div><div><b>${npend}</b>tekshiruvda</div><div><b>${nrej}</b>rad etilgan</div></div>
+ <div class="stat"><div><b>${nv}</b>jami ko'rish</div><div><b>${nsave}</b>saqlashlar</div></div>
+ ${(tp&&tp.length)?"<h2>Eng ko'p ko'rilgan maqolalar</h2>"+tp.map(x=>`<a class="card" href="#/a/${x.article_id}"><b>${esc(x.title)}</b><span class="m">👁 ${x.views}</span></a>`).join(""):""}
+ <h2>Foydalanuvchilar (oxirgi ${(us||[]).length})</h2>${(us||[]).map(u=>`<a class="rank" href="#/u/${u.id}" style="text-decoration:none;color:inherit"><span class="x">${esc(u.avatar)} ${esc(u.full_name||"(ismsiz)")}</span><span class="v">${dt(u.created_at)}</span></a>`).join("")}`;
  const {data:a}=await sb.from("articles").select("*").eq("status","pending").order("created_at");
- view(`<h1>Tahririyat</h1><h2>Tekshiruvdagi maqolalar (${(a||[]).length})</h2>${(a||[]).map(x=>`<div class="card"><span class="tag">${esc(x.category)}</span><b>${esc(x.title)}</b><div class="body" style="max-height:220px;overflow:auto">${paras(x.body)}</div>
+ view(`<h1>Tahririyat</h1>${stats}<h2>Tekshiruvdagi maqolalar (${(a||[]).length})</h2>${(a||[]).map(x=>`<div class="card"><span class="tag">${esc(x.category)}</span><b>${esc(x.title)}</b><div class="body" style="max-height:220px;overflow:auto">${paras(x.body)}</div>
  <input placeholder="Izoh (rad etsangiz sababi)" id="n_${x.id}"><div class="row"><button data-ok="${x.id}">Ma'qullash</button><button class="r" data-no="${x.id}">Rad etish</button></div></div>`).join("")||'<p class="m">Yo\'q.</p>'}
  <h2>Kitob qo'shish</h2><label>Nomi</label><input id="bt"><label>Muallif</label><input id="ba"><label>Qisqacha</label><input id="bi"><button id="bk">Qo'shish</button><p class="m" id="bm"></p>`);
  document.querySelectorAll("[data-ok]").forEach(el=>el.onclick=async()=>{await sb.from("articles").update({status:"published",published_at:new Date().toISOString(),note:""}).eq("id",el.dataset.ok);admin()});
