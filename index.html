@@ -127,7 +127,8 @@ async function profile(uid){
  const {data:p}=await sb.from("profiles").select("*").eq("id",id).maybeSingle();
  if(!p){view("<h1>Foydalanuvchi topilmadi</h1>");return}
  const {data:st}=await sb.from("article_stats").select("*").eq("author_id",id).order("published_at",{ascending:false});
- const pts=(st||[]).reduce((s,a)=>s+a.points,0), pub=(st||[]).length, vw=(st||[]).reduce((s,a)=>s+a.views,0);
+ const {data:shs}=await sb.from("shelf_stats").select("shelf_id,views,points").eq("user_id",id);const shm=Object.fromEntries((shs||[]).map(x=>[x.shelf_id,x]));
+ const pts=(st||[]).reduce((s,a)=>s+a.points,0)+(shs||[]).reduce((s,a)=>s+a.points,0), pub=(st||[]).length, vw=(st||[]).reduce((s,a)=>s+a.views,0)+(shs||[]).reduce((s,a)=>s+a.views,0);
  let reads=0;if(own){const {data}=await sb.rpc("my_reads");reads=data||0}
  let mine="";if(own){const {data}=await sb.from("articles").select("id,title,status,created_at,note").eq("author_id",id).neq("status","published").order("created_at",{ascending:false});
   mine=(data&&data.length)?'<h2>Tekshiruvdagi / rad etilgan</h2>'+data.map(a=>`<a class="card" href="#/a/${a.id}"><b>${esc(a.title)}</b><span class="m">${a.status==="pending"?"⏳ Tekshiruvda":"❌ Rad etilgan"}${a.note?" — "+esc(a.note):""}</span></a>`).join(""):""}
@@ -138,7 +139,7 @@ async function profile(uid){
  <div class="stat"><div><b>${pts}</b>ball</div><div><b>${pub}</b>maqola</div><div><b>${vw}</b>ko'rish</div>${own?`<div><b>${reads}</b>o'qigan</div>`:""}</div>
  ${ac.length?`<h2>Yutuqlar</h2><div class="row">${ac.map(x=>`<span class="tag">${x}</span>`).join("")}</div>`:""}
  <h2>Maqolalari</h2>${(st||[]).map(a=>`<a class="card" href="#/a/${a.article_id}"><span class="tag">${esc(a.category)}</span><b>${esc(a.title)}</b><span class="m">👁 ${a.views} · ${a.points} ball</span></a>`).join("")||'<p class="m">Hali e\'lon qilingan maqola yo\'q.</p>'}
- <h2>Javonim</h2>${(sh||[]).map(k=>shelfCard(k,{[id]:p},psv)).join("")||'<p class="m">Javonda hali kitob yo\'q.</p>'}${own?'<a class="btn" href="#/books/add">➕ Javonga kitob qo\'shish</a>':""}
+ <h2>Javonim</h2>${(sh||[]).map(k=>shelfCard(k,{[id]:p},psv,false,false,own?shm[k.id]:null)).join("")||'<p class="m">Javonda hali kitob yo\'q.</p>'}${own?'<a class="btn" href="#/books/add">➕ Javonga kitob qo\'shish</a>':""}
  ${mine}${own?`<h2>Profilni tahrirlash</h2>
  <label>Ism va familiya</label><input id="fn" value="${esc(p.full_name)}"><label>Avatar</label><div class="row">${AVS.map(a=>`<span class="chip ${a===p.avatar?"on":""}" data-av="${a}">${a}</span>`).join("")}</div>
  <label>O'zi haqida</label><textarea id="bio" style="min-height:90px;font-family:system-ui">${esc(p.bio)}</textarea>
@@ -154,10 +155,11 @@ async function profile(uid){
 }
 
 const stars=n=>"★".repeat(n)+"☆".repeat(5-n);
-function shelfCard(k,pm,sv,mine){const p=pm[k.user_id]||{};
+function shelfCard(k,pm,sv,mine,full,stat){const p=pm[k.user_id]||{};
  return `<div class="card book">${k.cover_url?`<img src="${esc(k.cover_url)}" alt="" loading="lazy" style="width:100%;max-height:340px;object-fit:contain;background:#f1ecdf;border-radius:10px;margin-bottom:8px">`:""}
- <b>${esc(k.title)}</b><span class="m">${esc(k.author)}</span><div style="color:var(--g);font-size:22px;letter-spacing:2px">${stars(k.stars)}</div>
- <p style="margin:6px 0"><span class="m">Bu kitob menga nima berdi:</span><br>${esc(k.review)}</p>
+ <b>${full?esc(k.title):`<a href="#/k/${k.id}" style="text-decoration:none">${esc(k.title)}</a>`}</b><span class="m">${esc(k.author)}</span><div style="color:var(--g);font-size:22px;letter-spacing:2px">${stars(k.stars)}</div>
+ <p style="margin:6px 0"><span class="m">Bu kitob menga nima berdi:</span><br>${full||k.review.length<=140?esc(k.review):esc(k.review.slice(0,140))+`… <a href="#/k/${k.id}">Davomini o'qish</a>`}</p>
+ ${stat?`<p class="m" style="margin:4px 0">👁 ${stat.views} o'qigan · ${stat.points} ball</p>`:""}
  <span class="m"><a href="#/u/${k.user_id}">${esc(p.avatar||"")} ${esc(p.full_name||"O'quvchi")}</a> · ${dt(k.created_at)}</span>
  <div class="row">${me&&sv?`<button data-b="${k.id}" class="${sv.has(k.id)?"o":""}">${sv.has(k.id)?"✓ Saqlangan":"🔖 Saqlash"}</button>`:""}${me&&(k.user_id===me.id||prof?.is_admin)?`<button class="r" data-db="${k.id}" data-img="${esc(k.cover_url||"")}">O'chirish</button>`:""}</div></div>`}
 function bindShelf(sv,reload){
@@ -176,6 +178,18 @@ async function books(){
  <a class="btn" href="#/books/add">➕ Javonimga kitob qo'shish</a>
  ${(b||[]).map(k=>shelfCard(k,pm,sv)).join("")||'<p class="m">Hozircha kitob yo\'q. Birinchi bo\'ling!</p>'}`);
  bindShelf(sv,books);
+}
+async function bookPage(id){
+ view('<p class="m">Yuklanmoqda…</p>');
+ const {data:k}=await sb.from("shelf").select("*").eq("id",id).maybeSingle();
+ if(!k){view("<h1>Kitob topilmadi</h1>");return}
+ if(me)await sb.rpc("register_shelf_view",{sid:id});
+ const {data:p}=await sb.from("profiles").select("id,full_name,avatar").eq("id",k.user_id).maybeSingle();
+ const {data:st}=await sb.from("shelf_stats").select("views,points").eq("shelf_id",id).maybeSingle();
+ const sv=await mySaved();
+ view(`<p><a href="#/books">← Barcha kitoblar</a></p>${shelfCard(k,{[k.user_id]:p||{}},sv,false,true,(me&&me.id===k.user_id)||prof?.is_admin?st:null)}
+ ${me?"":'<div class="box">Muallifga ball hisoblanishi uchun tizimga kirgan holda o\'qish kerak. <a href="#/login">Kirish</a></div>'}`);
+ bindShelf(sv,()=>bookPage(id));
 }
 async function addBook(){
  if(!me)return needLogin();
@@ -254,7 +268,7 @@ async function route(){
   if(m=h.match(/^#\/a\/(.+)$/))return article(m[1]);
   if(m=h.match(/^#\/u\/(.+)$/))return profile(m[1]);
   if(h==="#/write")return write();if(h==="#/login")return login();if(h==="#/me")return profile();
-  if(h==="#/books/add")return addBook();if(h==="#/books")return books();if(h==="#/lib")return lib();if(h==="#/top")return topPage();if(h==="#/admin")return admin();
+  if(h==="#/books/add")return addBook();if(m=h.match(/^#\/k\/(.+)$/))return bookPage(m[1]);if(h==="#/books")return books();if(h==="#/lib")return lib();if(h==="#/top")return topPage();if(h==="#/admin")return admin();
   home();
  }catch(e){view('<p class="err">Xatolik: '+esc(e.message||e)+'</p>')}
  window.scrollTo(0,0);
